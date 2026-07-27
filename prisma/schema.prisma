@@ -1,0 +1,118 @@
+// Modelo de datos funcional según Requerimiento_BD:
+// SujetoImpuesto -> Expediente -> DocumentoExpediente -> NotificacionDocumento (guía/estado)
+// SujetoImpuesto -> LiquidacionOficial -> NotificacionLiquidacion (notificación/guía)
+//
+// Regla 11.1: los campos con ceros iniciales (SujetoImpuesto, referencias, guías,
+// números de documento/liquidación/notificación) se guardan como String, nunca Int.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 6.6 Catálogo de tipos documentales
+model TipoDocumento {
+  codigo      String                @id
+  nombre      String
+  abreviatura String?
+  documentos  DocumentoExpediente[]
+}
+
+/// 6.7 Catálogo de empresas de mensajería
+model EmpresaMensajeria {
+  id          String @id @default(cuid())
+  codigo      String @unique
+  descripcion String
+}
+
+/// 6.1 Fuente: Expedientes  (SujetoImpuesto 1:N NumeroExpediente)
+model Expediente {
+  id               String                @id @default(cuid())
+  sujetoImpuesto   String
+  numeroExpediente String                @unique
+  documentos       DocumentoExpediente[]
+  createdAt        DateTime              @default(now())
+
+  @@index([sujetoImpuesto])
+}
+
+/// 6.2 Fuente: Documento Expediente (NumeroExpediente 1:N DocumentoExpedienteId)
+model DocumentoExpediente {
+  id                    String                  @id @default(cuid())
+  documentoExpedienteId String                  @unique
+  numeroExpediente      String
+  expediente            Expediente              @relation(fields: [numeroExpediente], references: [numeroExpediente])
+  sujetoImpuesto        String
+  numeroDocumento       String
+  tipoDocumentoCodigo   String?
+  tipoDocumento         TipoDocumento?          @relation(fields: [tipoDocumentoCodigo], references: [codigo])
+  nombre                String
+  estado                String?
+  fechaDocumento        DateTime?
+  actividadExp          String?
+  notificaciones        NotificacionDocumento[]
+
+  @@index([numeroExpediente])
+  @@index([sujetoImpuesto])
+}
+
+/// 6.3 Fuente: Notificaciones Documentos (DocumentoExpedienteId 1:N NumeroGuia/EstadoEnvio)
+model NotificacionDocumento {
+  id                    String              @id @default(cuid())
+  notificacion          String              @unique
+  documentoExpedienteId String
+  documento             DocumentoExpediente @relation(fields: [documentoExpedienteId], references: [documentoExpedienteId])
+  numeroGuia            String
+  estadoEnvio           String // ENTREGADO | DEVUELTO | otros (11.7)
+
+  @@index([documentoExpedienteId])
+  @@index([numeroGuia])
+}
+
+/// 6.4 Fuente: Liquidaciones Oficiales (SujetoImpuesto 1:N NumeroLiquidacionOficial)
+model LiquidacionOficial {
+  id                       String                    @id @default(cuid())
+  liquidacionOficialId     String                    @unique
+  sujetoImpuesto           String
+  numeroLiquidacionOficial String                    @unique
+  notificaciones           NotificacionLiquidacion[]
+  createdAt                DateTime                  @default(now())
+
+  @@index([sujetoImpuesto])
+}
+
+/// 6.5 Fuente: Notificaciones Liquidaciones (NumeroLiquidacionOficial 1:N NumeroNotificacion/NumeroGuia)
+model NotificacionLiquidacion {
+  id                       String             @id @default(cuid())
+  notificacion             String             @unique
+  numeroNotificacion       String
+  numeroGuia               String
+  numeroLiquidacionOficial String
+  liquidacion              LiquidacionOficial @relation(fields: [numeroLiquidacionOficial], references: [numeroLiquidacionOficial])
+
+  @@index([numeroLiquidacionOficial])
+  @@index([numeroGuia])
+}
+
+/// 15.1 Seguridad — usuarios autorizados de la plataforma
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  nombre       String
+  rol          String   @default("OPERATIVO")
+  createdAt    DateTime @default(now())
+}
+
+/// 15.2 Trazabilidad — auditoría de consultas realizadas
+model ConsultaAuditoria {
+  id         String   @id @default(cuid())
+  usuario    String
+  fecha      DateTime @default(now())
+  criterio   String
+  tipo       String // EXPEDIENTE | LIQUIDACION
+}
