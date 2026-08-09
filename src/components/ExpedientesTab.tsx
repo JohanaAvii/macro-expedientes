@@ -10,6 +10,7 @@ type Documento = {
   documentoExpedienteId: string;
   nombre: string;
   numeroDocumento: string;
+  archivoUrl: string | null;
 };
 type NotifDoc = {
   documentoExpedienteId: string;
@@ -228,6 +229,7 @@ export default function ExpedientesTab() {
                   <th>ID documento</th>
                   <th>Nombre del documento</th>
                   <th>N.º documento</th>
+                  <th>Archivo</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,6 +240,15 @@ export default function ExpedientesTab() {
                     <td className="code">{d.documentoExpedienteId}</td>
                     <td>{d.nombre}</td>
                     <td className="code">{d.numeroDocumento}</td>
+                    <td>
+                      {d.archivoUrl ? (
+                        <a className="rowbtn" href={d.archivoUrl} target="_blank" rel="noopener noreferrer">
+                          Ver PDF ↗
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

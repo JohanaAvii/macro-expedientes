@@ -54,6 +54,10 @@ model DocumentoExpediente {
   estado                String?
   fechaDocumento        DateTime?
   actividadExp          String?
+  // Ruta del PDF real en el almacenamiento (Vercel Blob / S3 / R2).
+  // Se llena al correr el script de carga de "Expedientes a entregar".
+  archivoUrl            String?
+  archivoNombreOriginal String?
   notificaciones        NotificacionDocumento[]
 
   @@index([numeroExpediente])

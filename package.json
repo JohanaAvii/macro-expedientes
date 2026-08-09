@@ -9,18 +9,22 @@
     "lint": "next lint",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "importar:datos": "tsx scripts/importar-datos.ts",
+    "importar:pdfs": "tsx scripts/subir-pdfs.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "@vercel/blob": "^2.7.0",
     "bcryptjs": "^2.4.3",
     "next": "14.2.35",
     "next-auth": "^4.24.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

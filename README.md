@@ -96,14 +96,60 @@ README ni licencia, para evitar conflictos al hacer push.)
 
 Cada nuevo `git push` a `main` vuelve a desplegar automáticamente.
 
-## 4. Después de desplegar
+## 4. Cargar tus datos reales (Access + carpeta de PDF)
+
+Tu información actual vive en dos lugares distintos, y hay un paso para cada uno:
+
+### 4.1 Metadata (tablas de Access)
+
+1. En Access, exporta cada una de estas 5 tablas a Excel, y guárdalas en la
+   carpeta `data/` de este proyecto con estos nombres:
+   - `data/expedientes.xlsx`
+   - `data/documento_expediente.xlsx`
+   - `data/notificaciones_documentos.xlsx`
+   - `data/liquidaciones_oficiales.xlsx`
+   - `data/notificaciones_liquidaciones.xlsx`
+2. Abre `scripts/importar-datos.ts` y ajusta el objeto `columnas` de cada
+   función para que coincida con los encabezados reales de tus archivos
+   (es el único lugar que hay que tocar — están marcados con 👉).
+3. Corre:
+   ```bash
+   npm run importar:datos
+   ```
+   Puedes correrlo varias veces sin duplicar datos (usa upsert).
+
+### 4.2 PDFs reales (carpeta "Expedientes a entregar")
+
+Los PDF de tu carpeta local se suben a **Vercel Blob** (almacenamiento en la
+nube) y quedan enlazados a cada documento, para que el personal pueda abrir
+el PDF directamente desde la app, sin ir a la carpeta.
+
+1. En tu proyecto de Vercel: **Storage → Create → Blob**, copia el token.
+2. Agrégalo a tu `.env`:
+   ```
+   BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
+   ```
+3. Corre esto desde el computador donde tienes la carpeta local (apunta a
+   tu ruta real):
+   ```bash
+   npm run importar:pdfs -- "D:\MacroPc\PRESCRIPCIONE\Expedientes a entregar"
+   ```
+   - Solo sube PDF cuyo nombre (sin extensión) coincida con un
+     `DocumentoExpedienteId` ya existente en la base de datos — por eso el
+     paso 4.1 va primero.
+   - Es reanudable: si el proceso se corta a mitad de camino (son 61.498
+     carpetas, puede tardar), corre el mismo comando de nuevo y continúa
+     donde quedó, sin volver a subir lo ya cargado.
+4. Al terminar, en la pantalla de **Consulta de expedientes → Sección 2 →
+   Documentos**, cada fila con PDF cargado muestra un botón **"Ver PDF"**
+   que abre el archivo real.
+
+## 5. Después de desplegar
 
 - Cambia la contraseña del usuario `admin` (o crea usuarios reales) antes de
   dar acceso a los operadores.
-- Reemplaza los datos de ejemplo del seed por una carga real desde las
-  tablas oficiales de la plataforma (sección 19 del requerimiento) — puedes
-  escribir un script de carga en `prisma/` que use `prisma.expediente.createMany`,
-  etc., leyendo desde tu fuente oficial (export CSV, otra base de datos, o API).
+- Reemplaza los datos de ejemplo del seed por tu carga real siguiendo la
+  sección 4 de este README (`npm run importar:datos` y `npm run importar:pdfs`).
 - Los endpoints de auditoría ya registran cada consulta en la tabla
   `ConsultaAuditoria` (usuario, fecha, criterio, tipo) — sección 15.2.
 

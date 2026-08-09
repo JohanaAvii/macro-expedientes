@@ -14,7 +14,8 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
       sujetoImpuesto: true,
       documentoExpedienteId: true,
       nombre: true,
-      numeroDocumento: true
+      numeroDocumento: true,
+      archivoUrl: true
     },
     orderBy: { documentoExpedienteId: "asc" }
   });
