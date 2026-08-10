@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -32,6 +33,14 @@ export default function LoginPage() {
   return (
     <div className="login-shell">
       <div className="login-card">
+        <Image
+          src="/images/escudo-valledupar.png"
+          alt="Escudo Alcaldía de Valledupar"
+          width={520}
+          height={263}
+          style={{ height: 52, width: "auto", marginBottom: 18 }}
+          priority
+        />
         <div className="eyebrow" style={{ marginBottom: 10 }}>
           <span className="dot"></span> alcaldía de valledupar · macro de expedientes
         </div>
