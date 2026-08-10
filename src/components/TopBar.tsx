@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { signOut } from "next-auth/react";
 
 export default function TopBar({ userName }: { userName: string }) {
@@ -13,14 +14,24 @@ export default function TopBar({ userName }: { userName: string }) {
   return (
     <div className="topbar">
       <div className="brand">
-        <span className="mark">
-          taxation<em>smart</em>
-        </span>
-        <span className="sep">/</span>
-        <span className="module">Gestión de Reporte</span>
+        <Image
+          className="shield"
+          src="/images/escudo-valledupar.png"
+          alt="Escudo Alcaldía de Valledupar"
+          width={520}
+          height={263}
+          style={{ height: 46, width: "auto" }}
+          priority
+        />
+        <div className="divider"></div>
+        <div>
+          <span className="module">Macro de Expedientes</span>
+          <span className="module-sub">Secretaría de Hacienda</span>
+        </div>
       </div>
       <div className="entity">
-        <span className="badge">ALCALDÍA DE VALLEDUPAR</span>
+        <span className="badge">Impuesto 101 · Impuesto 102</span>
+        <div className="user">{initials}</div>
         <span>{userName}</span>
         <button className="logout" onClick={() => signOut({ callbackUrl: "/login" })}>
           Salir

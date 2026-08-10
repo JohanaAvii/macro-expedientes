@@ -1,26 +1,18 @@
 /**
  * IMPORTADOR DE DATOS — desde exportaciones de Access hacia PostgreSQL
  * ---------------------------------------------------------------------
- * Cómo exportar desde Access (una vez por tabla):
- *   1. Abre la tabla en Access (ej. "Expedientes").
- *   2. Clic derecho → Exportar → Excel (o "Archivo de texto" con separador ";").
- *   3. Guarda el archivo en la carpeta `data/` de este proyecto con el
- *      mismo nombre que usamos abajo (puedes cambiar el nombre en MAPA_ARCHIVOS).
+ * Ya ajustado a las columnas reales de tu exportación de Access. Si vuelves
+ * a exportar y los nombres de columna cambian, ajusta los objetos `columnas`
+ * de cada función más abajo (marcados con 👉).
  *
- * Exporta estas 5 tablas (las mismas que ya tienes en tu Access):
- *   - Expedientes                → data/expedientes.xlsx
- *   - Documento Expediente       → data/documento_expediente.xlsx
- *   - Notificaciones Documentos  → data/notificaciones_documentos.xlsx
- *   - LiquidacionesOficiales     → data/liquidaciones_oficiales.xlsx
- *   - Notificaciones Liquidaciones → data/notificaciones_liquidaciones.xlsx
+ * Carga por LOTES (no fila por fila) porque los volúmenes son grandes:
+ * documento_expediente (~250k filas), notificaciones_liquidaciones (~540k).
+ * Cada tabla se inserta en bloques de 2000 registros con `createMany` +
+ * `skipDuplicates`, y las relaciones (expediente, documento, liquidación)
+ * se validan en memoria contra un set ya cargado, no con una consulta por fila.
  *
- * IMPORTANTE — columnas: los nombres reales de columna en tu Access pueden
- * no coincidir exactamente con los que usamos en el mockup. Abre cada
- * archivo exportado, mira los encabezados reales, y ajusta el objeto
- * `columnas` de cada función más abajo (son el único lugar que hay que tocar).
- *
- * Cómo correrlo:
- *   DATABASE_URL="postgresql://..." npx tsx scripts/importar-datos.ts
+ * Cómo correrlo (usa el DATABASE_URL de tu .env):
+ *   npm run importar:datos
  */
 
 import * as XLSX from "xlsx";
@@ -30,12 +22,26 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const DATA_DIR = path.join(process.cwd(), "data");
+const TAMANO_LOTE = 2000;
 
 // Convierte cualquier valor leído del Excel a texto, conservando ceros
 // iniciales (regla 11.1). Nunca lo tratamos como número.
 function aTexto(valor: unknown): string {
   if (valor === null || valor === undefined) return "";
   return String(valor).trim();
+}
+
+// Access agrega un BOM invisible al primer encabezado de cada hoja al
+// exportar a Excel (se ve como "\ufeffSujetoImpuesto"). Lo limpiamos aquí
+// para que los nombres de columna coincidan con lo que escribimos abajo.
+function limpiarEncabezados(filas: Record<string, unknown>[]) {
+  return filas.map((fila) => {
+    const limpia: Record<string, unknown> = {};
+    for (const [clave, valor] of Object.entries(fila)) {
+      limpia[clave.replace(/^\uFEFF/, "").trim()] = valor;
+    }
+    return limpia;
+  });
 }
 
 function leerHoja(nombreArchivo: string) {
@@ -46,199 +52,285 @@ function leerHoja(nombreArchivo: string) {
   }
   const libro = XLSX.readFile(ruta, { raw: false });
   const hoja = libro.Sheets[libro.SheetNames[0]];
-  // defval: "" evita que celdas vacías rompan el tipado; raw:false conserva
-  // el texto tal como se ve (importante para ceros iniciales).
-  return XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: "", raw: false });
+  const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: "", raw: false });
+  return limpiarEncabezados(filas);
+}
+
+// Inserta en lotes. Si un lote entero falla (choque de llave única en un
+// campo distinto al usado para deduplicar), reintenta ese lote fila por
+// fila para no perder el resto de los datos buenos.
+async function insertarEnLotes<T>(
+  nombre: string,
+  datos: T[],
+  crearLote: (lote: T[]) => Promise<unknown>,
+  crearUno: (item: T) => Promise<unknown>
+) {
+  let ok = 0;
+  let errores = 0;
+  for (let i = 0; i < datos.length; i += TAMANO_LOTE) {
+    const lote = datos.slice(i, i + TAMANO_LOTE);
+    try {
+      await crearLote(lote);
+      ok += lote.length;
+    } catch {
+      for (const item of lote) {
+        try {
+          await crearUno(item);
+          ok++;
+        } catch {
+          errores++;
+        }
+      }
+    }
+    if ((i / TAMANO_LOTE) % 10 === 0) {
+      console.log(`  … ${nombre}: ${Math.min(i + TAMANO_LOTE, datos.length)} / ${datos.length}`);
+    }
+  }
+  console.log(`✔ ${nombre}: ${ok} insertados${errores ? ` (${errores} con error, omitidos)` : ""}`);
+}
+
+// Quita filas repetidas quedándose con la última ocurrencia de cada llave
+// (createMany no acepta llaves duplicadas dentro del mismo lote).
+function deduplicar<T>(filas: T[], llave: (item: T) => string): T[] {
+  const mapa = new Map<string, T>();
+  for (const fila of filas) {
+    const k = llave(fila);
+    if (k) mapa.set(k, fila);
+  }
+  return [...mapa.values()];
 }
 
 async function importarExpedientes() {
   const filas = leerHoja("expedientes.xlsx");
   if (!filas) return;
 
-  // 👉 Ajusta estos nombres a los encabezados reales de tu exportación.
+  // 👉 Columnas reales: Id, SujetoImpuesto, NumeroExpediente
   const columnas = { sujetoImpuesto: "SujetoImpuesto", numeroExpediente: "NumeroExpediente" };
 
-  let ok = 0;
-  for (const fila of filas) {
-    const numeroExpediente = aTexto(fila[columnas.numeroExpediente]);
-    const sujetoImpuesto = aTexto(fila[columnas.sujetoImpuesto]);
-    if (!numeroExpediente || !sujetoImpuesto) continue;
+  const datos = deduplicar(
+    filas
+      .map((f) => ({
+        numeroExpediente: aTexto(f[columnas.numeroExpediente]),
+        sujetoImpuesto: aTexto(f[columnas.sujetoImpuesto])
+      }))
+      .filter((d) => d.numeroExpediente && d.sujetoImpuesto),
+    (d) => d.numeroExpediente
+  );
 
-    await prisma.expediente.upsert({
-      where: { numeroExpediente },
-      update: { sujetoImpuesto },
-      create: { numeroExpediente, sujetoImpuesto }
-    });
-    ok++;
-  }
-  console.log(`✔ Expedientes importados: ${ok}`);
+  await insertarEnLotes(
+    "Expedientes",
+    datos,
+    (lote) => prisma.expediente.createMany({ data: lote, skipDuplicates: true }),
+    (item) => prisma.expediente.upsert({ where: { numeroExpediente: item.numeroExpediente }, update: item, create: item })
+  );
 }
 
 async function importarDocumentos() {
   const filas = leerHoja("documento_expediente.xlsx");
   if (!filas) return;
 
-  // 👉 Ajusta estos nombres a los encabezados reales de tu exportación.
+  // 👉 Columnas reales: Id, DocumentoExpedienteId, ActividadExpedienteId,
+  //    NumeroDocumento, TipoDocumentoId, Nombre, Estado, FechaDocumento,
+  //    SujetoImpuesto, NumeroExpediente
   const columnas = {
     documentoExpedienteId: "DocumentoExpedienteId",
     numeroExpediente: "NumeroExpediente",
     sujetoImpuesto: "SujetoImpuesto",
     numeroDocumento: "NumeroDocumento",
-    nombre: "Nombre"
+    nombre: "Nombre",
+    estado: "Estado",
+    actividadExp: "ActividadExpedienteId"
   };
 
-  let ok = 0;
-  let omitidos = 0;
-  for (const fila of filas) {
-    const documentoExpedienteId = aTexto(fila[columnas.documentoExpedienteId]);
-    const numeroExpediente = aTexto(fila[columnas.numeroExpediente]);
-    if (!documentoExpedienteId || !numeroExpediente) continue;
+  // Cargamos en memoria los expedientes ya existentes (deben insertarse
+  // primero) para filtrar sin hacer una consulta por cada una de las
+  // ~250.000 filas.
+  const expedientesExistentes = new Set(
+    (await prisma.expediente.findMany({ select: { numeroExpediente: true } })).map((e) => e.numeroExpediente)
+  );
 
-    // El expediente debe existir primero (se creó en importarExpedientes()).
-    const existe = await prisma.expediente.findUnique({ where: { numeroExpediente } });
-    if (!existe) {
-      omitidos++;
-      continue;
-    }
+  let sinExpediente = 0;
+  const datos = deduplicar(
+    filas
+      .map((f) => ({
+        documentoExpedienteId: aTexto(f[columnas.documentoExpedienteId]),
+        numeroExpediente: aTexto(f[columnas.numeroExpediente]),
+        sujetoImpuesto: aTexto(f[columnas.sujetoImpuesto]),
+        numeroDocumento: aTexto(f[columnas.numeroDocumento]),
+        nombre: aTexto(f[columnas.nombre]) || "Documento sin nombre",
+        estado: aTexto(f[columnas.estado]) || null,
+        actividadExp: aTexto(f[columnas.actividadExp]) || null
+      }))
+      .filter((d) => {
+        if (!d.documentoExpedienteId || !d.numeroExpediente) return false;
+        if (!expedientesExistentes.has(d.numeroExpediente)) {
+          sinExpediente++;
+          return false;
+        }
+        return true;
+      }),
+    (d) => d.documentoExpedienteId
+  );
 
-    await prisma.documentoExpediente.upsert({
-      where: { documentoExpedienteId },
-      update: {
-        numeroExpediente,
-        sujetoImpuesto: aTexto(fila[columnas.sujetoImpuesto]),
-        numeroDocumento: aTexto(fila[columnas.numeroDocumento]),
-        nombre: aTexto(fila[columnas.nombre])
-      },
-      create: {
-        documentoExpedienteId,
-        numeroExpediente,
-        sujetoImpuesto: aTexto(fila[columnas.sujetoImpuesto]),
-        numeroDocumento: aTexto(fila[columnas.numeroDocumento]),
-        nombre: aTexto(fila[columnas.nombre])
-      }
-    });
-    ok++;
-  }
-  console.log(`✔ Documentos importados: ${ok}${omitidos ? ` (omitidos por expediente inexistente: ${omitidos})` : ""}`);
+  if (sinExpediente) console.warn(`⚠ ${sinExpediente} documentos omitidos por no tener expediente asociado.`);
+
+  await insertarEnLotes(
+    "Documentos",
+    datos,
+    (lote) => prisma.documentoExpediente.createMany({ data: lote, skipDuplicates: true }),
+    (item) =>
+      prisma.documentoExpediente.upsert({
+        where: { documentoExpedienteId: item.documentoExpedienteId },
+        update: item,
+        create: item
+      })
+  );
 }
 
 async function importarNotificacionesDocumentos() {
   const filas = leerHoja("notificaciones_documentos.xlsx");
   if (!filas) return;
 
-  // 👉 Ajusta estos nombres a los encabezados reales de tu exportación.
+  // 👉 Columnas reales: Id, NotificacionesDocumentoId, DocumentoExpedienteId,
+  //    NumeroGuia, EstadoEnvio
   const columnas = {
-    notificacion: "Notificacion", // si no existe una columna llave única, usa DocumentoExpedienteId + NumeroGuia combinados (ver abajo)
+    notificacion: "NotificacionesDocumentoId",
     documentoExpedienteId: "DocumentoExpedienteId",
     numeroGuia: "NumeroGuia",
     estadoEnvio: "EstadoEnvio"
   };
 
-  let ok = 0;
-  let omitidos = 0;
-  for (const fila of filas) {
-    const documentoExpedienteId = aTexto(fila[columnas.documentoExpedienteId]);
-    const numeroGuia = aTexto(fila[columnas.numeroGuia]);
-    if (!documentoExpedienteId || !numeroGuia) continue;
+  const documentosExistentes = new Set(
+    (await prisma.documentoExpediente.findMany({ select: { documentoExpedienteId: true } })).map(
+      (d) => d.documentoExpedienteId
+    )
+  );
 
-    const docExiste = await prisma.documentoExpediente.findUnique({ where: { documentoExpedienteId } });
-    if (!docExiste) {
-      omitidos++;
-      continue;
-    }
+  let sinDocumento = 0;
+  const datos = deduplicar(
+    filas
+      .map((f) => ({
+        notificacion: aTexto(f[columnas.notificacion]),
+        documentoExpedienteId: aTexto(f[columnas.documentoExpedienteId]),
+        numeroGuia: aTexto(f[columnas.numeroGuia]),
+        estadoEnvio: aTexto(f[columnas.estadoEnvio]).toUpperCase()
+      }))
+      .filter((d) => {
+        if (!d.notificacion || !d.documentoExpedienteId || !d.numeroGuia) return false;
+        if (!documentosExistentes.has(d.documentoExpedienteId)) {
+          sinDocumento++;
+          return false;
+        }
+        return true;
+      }),
+    (d) => d.notificacion
+  );
 
-    const notificacion = aTexto(fila[columnas.notificacion]) || `${documentoExpedienteId}-${numeroGuia}`;
-    const estadoEnvio = aTexto(fila[columnas.estadoEnvio]).toUpperCase();
+  if (sinDocumento) console.warn(`⚠ ${sinDocumento} notificaciones omitidas por no tener documento asociado.`);
 
-    await prisma.notificacionDocumento.upsert({
-      where: { notificacion },
-      update: { documentoExpedienteId, numeroGuia, estadoEnvio },
-      create: { notificacion, documentoExpedienteId, numeroGuia, estadoEnvio }
-    });
-    ok++;
-  }
-  console.log(`✔ Notificaciones de documentos importadas: ${ok}${omitidos ? ` (omitidas por documento inexistente: ${omitidos})` : ""}`);
+  await insertarEnLotes(
+    "Notificaciones de documentos",
+    datos,
+    (lote) => prisma.notificacionDocumento.createMany({ data: lote, skipDuplicates: true }),
+    (item) =>
+      prisma.notificacionDocumento.upsert({ where: { notificacion: item.notificacion }, update: item, create: item })
+  );
 }
 
 async function importarLiquidaciones() {
   const filas = leerHoja("liquidaciones_oficiales.xlsx");
   if (!filas) return;
 
-  // 👉 Ajusta estos nombres a los encabezados reales de tu exportación.
+  // 👉 Columnas reales: Id, LiquidacionOficialId, NumeroLiquidacionOficial, SujetoImpuesto
   const columnas = {
     liquidacionOficialId: "LiquidacionOficialId",
     sujetoImpuesto: "SujetoImpuesto",
     numeroLiquidacionOficial: "NumeroLiquidacionOficial"
   };
 
-  let ok = 0;
-  for (const fila of filas) {
-    const numeroLiquidacionOficial = aTexto(fila[columnas.numeroLiquidacionOficial]);
-    const sujetoImpuesto = aTexto(fila[columnas.sujetoImpuesto]);
-    if (!numeroLiquidacionOficial || !sujetoImpuesto) continue;
+  const datos = deduplicar(
+    filas
+      .map((f) => ({
+        numeroLiquidacionOficial: aTexto(f[columnas.numeroLiquidacionOficial]),
+        sujetoImpuesto: aTexto(f[columnas.sujetoImpuesto]),
+        liquidacionOficialId: aTexto(f[columnas.liquidacionOficialId])
+      }))
+      .filter((d) => d.numeroLiquidacionOficial && d.sujetoImpuesto && d.liquidacionOficialId),
+    (d) => d.numeroLiquidacionOficial
+  );
 
-    await prisma.liquidacionOficial.upsert({
-      where: { numeroLiquidacionOficial },
-      update: { sujetoImpuesto, liquidacionOficialId: aTexto(fila[columnas.liquidacionOficialId]) || numeroLiquidacionOficial },
-      create: {
-        numeroLiquidacionOficial,
-        sujetoImpuesto,
-        liquidacionOficialId: aTexto(fila[columnas.liquidacionOficialId]) || numeroLiquidacionOficial
-      }
-    });
-    ok++;
-  }
-  console.log(`✔ Liquidaciones oficiales importadas: ${ok}`);
+  await insertarEnLotes(
+    "Liquidaciones oficiales",
+    datos,
+    (lote) => prisma.liquidacionOficial.createMany({ data: lote, skipDuplicates: true }),
+    (item) =>
+      prisma.liquidacionOficial.upsert({
+        where: { numeroLiquidacionOficial: item.numeroLiquidacionOficial },
+        update: item,
+        create: item
+      })
+  );
 }
 
 async function importarNotificacionesLiquidaciones() {
   const filas = leerHoja("notificaciones_liquidaciones.xlsx");
   if (!filas) return;
 
-  // 👉 Ajusta estos nombres a los encabezados reales de tu exportación.
+  // 👉 Columnas reales: Id, NotificacionesPredialID, NumeroNotificacion,
+  //    NumeroGuia, NumeroLiquidacionOficial
   const columnas = {
+    notificacion: "NotificacionesPredialID",
     numeroLiquidacionOficial: "NumeroLiquidacionOficial",
     numeroNotificacion: "NumeroNotificacion",
     numeroGuia: "NumeroGuia"
   };
 
-  let ok = 0;
-  let omitidos = 0;
-  for (const fila of filas) {
-    const numeroLiquidacionOficial = aTexto(fila[columnas.numeroLiquidacionOficial]);
-    const numeroGuia = aTexto(fila[columnas.numeroGuia]);
-    if (!numeroLiquidacionOficial || !numeroGuia) continue;
+  const liquidacionesExistentes = new Set(
+    (await prisma.liquidacionOficial.findMany({ select: { numeroLiquidacionOficial: true } })).map(
+      (l) => l.numeroLiquidacionOficial
+    )
+  );
 
-    const liqExiste = await prisma.liquidacionOficial.findUnique({ where: { numeroLiquidacionOficial } });
-    if (!liqExiste) {
-      omitidos++;
-      continue;
-    }
+  let sinLiquidacion = 0;
+  const datos = deduplicar(
+    filas
+      .map((f) => ({
+        notificacion: aTexto(f[columnas.notificacion]),
+        numeroLiquidacionOficial: aTexto(f[columnas.numeroLiquidacionOficial]),
+        numeroNotificacion: aTexto(f[columnas.numeroNotificacion]),
+        numeroGuia: aTexto(f[columnas.numeroGuia])
+      }))
+      .filter((d) => {
+        if (!d.notificacion || !d.numeroLiquidacionOficial || !d.numeroGuia) return false;
+        if (!liquidacionesExistentes.has(d.numeroLiquidacionOficial)) {
+          sinLiquidacion++;
+          return false;
+        }
+        return true;
+      }),
+    (d) => d.notificacion
+  );
 
-    const notificacion = `${numeroLiquidacionOficial}-${numeroGuia}`;
-    await prisma.notificacionLiquidacion.upsert({
-      where: { notificacion },
-      update: { numeroLiquidacionOficial, numeroGuia, numeroNotificacion: aTexto(fila[columnas.numeroNotificacion]) },
-      create: {
-        notificacion,
-        numeroLiquidacionOficial,
-        numeroGuia,
-        numeroNotificacion: aTexto(fila[columnas.numeroNotificacion])
-      }
-    });
-    ok++;
-  }
-  console.log(`✔ Notificaciones de liquidaciones importadas: ${ok}${omitidos ? ` (omitidas: ${omitidos})` : ""}`);
+  if (sinLiquidacion) console.warn(`⚠ ${sinLiquidacion} notificaciones omitidas por no tener liquidación asociada.`);
+
+  await insertarEnLotes(
+    "Notificaciones de liquidaciones",
+    datos,
+    (lote) => prisma.notificacionLiquidacion.createMany({ data: lote, skipDuplicates: true }),
+    (item) =>
+      prisma.notificacionLiquidacion.upsert({ where: { notificacion: item.notificacion }, update: item, create: item })
+  );
 }
 
 async function main() {
   console.log("Iniciando importación desde", DATA_DIR);
+  console.log("(los volúmenes grandes pueden tardar varios minutos, es normal)\n");
   await importarExpedientes();
   await importarDocumentos();
   await importarNotificacionesDocumentos();
   await importarLiquidaciones();
   await importarNotificacionesLiquidaciones();
-  console.log("Listo.");
+  console.log("\nListo.");
 }
 
 main()

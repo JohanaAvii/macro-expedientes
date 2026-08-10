@@ -34,7 +34,7 @@ export default function DashboardShell() {
 
       <div className="footnote">
         <span>Fuente: tablas oficiales de la plataforma — sin dependencia de Excel, macros VBA o Access.</span>
-        <span className="code">CLIENTE: ALCALDÍA DE VALLEDUPAR · MÓDULO: Gestión de reporte</span>
+        <span className="code">ALCALDÍA DE VALLEDUPAR · SECRETARÍA DE HACIENDA · MÓDULO: Macro de Expedientes</span>
       </div>
     </>
   );

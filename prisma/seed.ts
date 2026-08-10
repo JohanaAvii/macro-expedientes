@@ -12,7 +12,7 @@ async function main() {
     create: {
       username: "admin",
       passwordHash,
-      nombre: "Joel García",
+      nombre: "Administrador",
       rol: "ADMIN"
     }
   });

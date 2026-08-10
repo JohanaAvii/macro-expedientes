@@ -33,7 +33,7 @@ export default function LoginPage() {
     <div className="login-shell">
       <div className="login-card">
         <div className="eyebrow" style={{ marginBottom: 10 }}>
-          <span className="dot"></span> taxationsmart · gestión de reporte
+          <span className="dot"></span> alcaldía de valledupar · macro de expedientes
         </div>
         <h1>Ingresar</h1>
         <p>Alcaldía de Valledupar — acceso restringido a usuarios autorizados.</p>
