@@ -25,17 +25,22 @@ export default function ContribuyenteEtiqueta({ sujetoImpuesto }: { sujetoImpues
   async function guardar() {
     if (!formNombre.trim() && !formId.trim()) return;
     setGuardando(true);
-    const res = await fetch("/api/contribuyentes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sujetoImpuesto, nombre: formNombre.trim(), identificacion: formId.trim() })
-    });
-    const json = await res.json();
-    setGuardando(false);
-    if (res.ok) {
-      setNombre(json.data.nombre);
-      setIdentificacion(json.data.identificacion);
-      setEditando(false);
+    try {
+      const res = await fetch("/api/contribuyentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sujetoImpuesto, nombre: formNombre.trim(), identificacion: formId.trim() })
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setNombre(json.data.nombre);
+        setIdentificacion(json.data.identificacion);
+        setEditando(false);
+      }
+    } catch {
+      // se queda en modo edición; el usuario puede intentar de nuevo
+    } finally {
+      setGuardando(false);
     }
   }
 

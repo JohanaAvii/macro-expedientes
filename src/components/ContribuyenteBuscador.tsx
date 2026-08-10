@@ -17,15 +17,21 @@ export default function ContribuyenteBuscador({ onSeleccionar }: { onSeleccionar
       return;
     }
     setBuscando(true);
-    const res = await fetch(`/api/contribuyentes?buscar=${encodeURIComponent(texto.trim())}`);
-    const json = await res.json();
-    setBuscando(false);
-    if (!res.ok) {
-      setError(json.error ?? "No se encontraron coincidencias.");
-      setResultados([]);
-      return;
+    try {
+      const res = await fetch(`/api/contribuyentes?buscar=${encodeURIComponent(texto.trim())}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "No se encontraron coincidencias.");
+        setResultados([]);
+        return;
+      }
+      setResultados(json.data);
+    } catch {
+      setError("No se pudo completar la búsqueda (falla de red o del servidor). Intenta de nuevo.");
+      setResultados(null);
+    } finally {
+      setBuscando(false);
     }
-    setResultados(json.data);
   }
 
   return (
@@ -39,7 +45,7 @@ export default function ContribuyenteBuscador({ onSeleccionar }: { onSeleccionar
         onChange={(e) => setTexto(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && buscar()}
       />
-      <div className="hint">Solo encuentra contribuyentes ya registrados manualmente (ver Sección 1).</div>
+      <div className="hint">Busca entre los contribuyentes ya registrados (extraídos de los documentos o agregados manualmente).</div>
       <button className="btn btn-ghost" style={{ marginTop: 8, width: "100%", justifyContent: "center" }} onClick={buscar} disabled={buscando}>
         {buscando ? "Buscando…" : "Buscar contribuyente"}
       </button>
