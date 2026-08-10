@@ -6,6 +6,8 @@ export const config = {
     "/api/expedientes",
     "/api/expedientes/:path*",
     "/api/liquidaciones",
-    "/api/liquidaciones/:path*"
+    "/api/liquidaciones/:path*",
+    "/api/contribuyentes",
+    "/api/contribuyentes/:path*"
   ]
 };

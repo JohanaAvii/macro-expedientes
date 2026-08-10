@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Trail from "@/components/Trail";
+import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
+import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
 
 type Expediente = { numeroExpediente: string; sujetoImpuesto: string };
 type Documento = {
@@ -51,16 +53,17 @@ export default function ExpedientesTab() {
     setActiveNodes([]);
   }
 
-  async function buscarExpedientes() {
+  async function buscarExpedientes(overrideSujeto?: string) {
     setError(null);
-    if (!sujeto.trim() && !numeroExpediente.trim()) {
+    const sujetoUsar = overrideSujeto ?? sujeto;
+    if (!sujetoUsar.trim() && !numeroExpediente.trim()) {
       setError("Debe ingresar una referencia, sujeto impuesto, número de expediente o liquidación para realizar la consulta.");
       return;
     }
     setLoading(true);
     const qs = new URLSearchParams();
     if (numeroExpediente.trim()) qs.set("expediente", numeroExpediente.trim());
-    else qs.set("sujeto", sujeto.trim());
+    else qs.set("sujeto", sujetoUsar.trim());
 
     const res = await fetch(`/api/expedientes?${qs.toString()}`);
     const json = await res.json();
@@ -76,6 +79,12 @@ export default function ExpedientesTab() {
     setNotificaciones(null);
     setSeleccionado(null);
     setActiveNodes(json.data.length ? ["sujeto"] : []);
+  }
+
+  function buscarPorContribuyente(sujetoEncontrado: string) {
+    setSujeto(sujetoEncontrado);
+    setNumeroExpediente("");
+    buscarExpedientes(sujetoEncontrado);
   }
 
   async function consultarDocumentos(numero: string) {
@@ -144,6 +153,9 @@ export default function ExpedientesTab() {
               <span className="sw" style={{ background: "var(--rust)" }}></span> DEVUELTO — retorna al remitente
             </div>
           </div>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed var(--line)" }}>
+            <ContribuyenteBuscador onSeleccionar={buscarPorContribuyente} />
+          </div>
         </div>
       </aside>
 
@@ -163,6 +175,11 @@ export default function ExpedientesTab() {
               {expedientes ? `${expedientes.length} ${expedientes.length === 1 ? "resultado" : "resultados"}` : "—"}
             </span>
           </div>
+          {expedientes && expedientes.length > 0 && (
+            <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", background: "#FAFAF7" }}>
+              <ContribuyenteEtiqueta sujetoImpuesto={expedientes[0].sujetoImpuesto} />
+            </div>
+          )}
           {!expedientes ? (
             <div className="empty">
               <div className="glyph">—</div>

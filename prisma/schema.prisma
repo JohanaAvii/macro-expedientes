@@ -120,3 +120,19 @@ model ConsultaAuditoria {
   criterio   String
   tipo       String // EXPEDIENTE | LIQUIDACION
 }
+
+/// Registro de contribuyentes — nombre/identificación asociados a un
+/// SujetoImpuesto. No viene de Access (esa base solo maneja el código);
+/// se construye desde cero, cargando lo que se consiga y/o registrando
+/// manualmente desde la app a medida que el personal lo va necesitando.
+model Contribuyente {
+  id             String   @id @default(cuid())
+  sujetoImpuesto String   @unique
+  nombre         String?
+  identificacion String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([nombre])
+  @@index([identificacion])
+}

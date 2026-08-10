@@ -130,7 +130,8 @@ async function main() {
             put(`expedientes/${numeroExpediente}/${documentoExpedienteId}.pdf`, buffer, {
               access: "public",
               contentType: "application/pdf",
-              token: process.env.BLOB_READ_WRITE_TOKEN
+              token: process.env.BLOB_READ_WRITE_TOKEN,
+              allowOverwrite: true
             }),
           3,
           2000

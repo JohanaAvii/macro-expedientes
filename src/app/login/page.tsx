@@ -41,9 +41,7 @@ export default function LoginPage() {
           style={{ height: 52, width: "auto", marginBottom: 18 }}
           priority
         />
-        <div className="eyebrow" style={{ marginBottom: 10 }}>
-          <span className="dot"></span> alcaldía de valledupar · macro de expedientes
-        </div>
+
         <h1>Ingresar</h1>
         <p>Alcaldía de Valledupar — acceso restringido a usuarios autorizados.</p>
         {error && <div className="login-error">{error}</div>}

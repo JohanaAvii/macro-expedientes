@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Trail from "@/components/Trail";
+import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
+import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
 
 type Liquidacion = { sujetoImpuesto: string; liquidacionOficialId: string; numeroLiquidacionOficial: string };
 type NotifLiq = { numeroLiquidacionOficial: string; sujetoImpuesto: string; numeroNotificacion: string; numeroGuia: string };
@@ -33,16 +35,17 @@ export default function LiquidacionesTab() {
     setActiveNodes([]);
   }
 
-  async function buscarLiquidaciones() {
+  async function buscarLiquidaciones(overrideSujeto?: string) {
     setError(null);
-    if (!sujeto.trim() && !numeroLiquidacion.trim()) {
+    const sujetoUsar = overrideSujeto ?? sujeto;
+    if (!sujetoUsar.trim() && !numeroLiquidacion.trim()) {
       setError("Debe ingresar una referencia, sujeto impuesto, número de expediente o liquidación para realizar la consulta.");
       return;
     }
     setLoading(true);
     const qs = new URLSearchParams();
     if (numeroLiquidacion.trim()) qs.set("liquidacion", numeroLiquidacion.trim());
-    else qs.set("sujeto", sujeto.trim());
+    else qs.set("sujeto", sujetoUsar.trim());
 
     const res = await fetch(`/api/liquidaciones?${qs.toString()}`);
     const json = await res.json();
@@ -57,6 +60,12 @@ export default function LiquidacionesTab() {
     setNotificaciones(null);
     setSeleccionado(null);
     setActiveNodes(json.data.length ? ["sujeto"] : []);
+  }
+
+  function buscarPorContribuyente(sujetoEncontrado: string) {
+    setSujeto(sujetoEncontrado);
+    setNumeroLiquidacion("");
+    buscarLiquidaciones(sujetoEncontrado);
   }
 
   async function consultarNotificaciones(numero: string) {
@@ -95,12 +104,15 @@ export default function LiquidacionesTab() {
             />
           </div>
           <div className="btnrow">
-            <button className="btn btn-primary" onClick={buscarLiquidaciones} disabled={loading}>
+            <button className="btn btn-primary" onClick={() => buscarLiquidaciones()} disabled={loading}>
               Buscar liquidaciones <span>↵</span>
             </button>
             <button className="btn btn-danger-ghost" onClick={limpiar}>
               Limpiar filtros
             </button>
+          </div>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px dashed var(--line)" }}>
+            <ContribuyenteBuscador onSeleccionar={buscarPorContribuyente} />
           </div>
         </div>
       </aside>
@@ -121,6 +133,11 @@ export default function LiquidacionesTab() {
               {liquidaciones ? `${liquidaciones.length} ${liquidaciones.length === 1 ? "resultado" : "resultados"}` : "—"}
             </span>
           </div>
+          {liquidaciones && liquidaciones.length > 0 && (
+            <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", background: "#FAFAF7" }}>
+              <ContribuyenteEtiqueta sujetoImpuesto={liquidaciones[0].sujetoImpuesto} />
+            </div>
+          )}
           {!liquidaciones ? (
             <div className="empty">
               <div className="glyph">—</div>
