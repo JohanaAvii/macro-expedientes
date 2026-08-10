@@ -135,7 +135,7 @@ export default function ExpedientesTab() {
             />
           </div>
           <div className="btnrow">
-            <button className="btn btn-primary" onClick={buscarExpedientes} disabled={loading}>
+            <button className="btn btn-primary" onClick={() => buscarExpedientes()} disabled={loading}>
               Buscar expedientes <span>↵</span>
             </button>
             <button className="btn btn-ghost" onClick={consultarNotificaciones} disabled={!seleccionado || loading}>
