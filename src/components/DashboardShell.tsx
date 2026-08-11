@@ -10,9 +10,6 @@ export default function DashboardShell() {
   return (
     <>
       <div className="header">
-        <div className="eyebrow">
-          <span className="dot"></span> Impuesto 101 · Predial &nbsp;·&nbsp; Impuesto 102 · ICA
-        </div>
         <h1>Consulta unificada de cartera</h1>
         <p className="lede">
           Reemplaza la herramienta local en Excel/Access. Ingrese una referencia corta, sujeto impuesto,

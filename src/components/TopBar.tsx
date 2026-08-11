@@ -30,7 +30,6 @@ export default function TopBar({ userName }: { userName: string }) {
         </div>
       </div>
       <div className="entity">
-        <span className="badge">Impuesto 101 · Impuesto 102</span>
         <div className="user">{initials}</div>
         <span>{userName}</span>
         <button className="logout" onClick={() => signOut({ callbackUrl: "/login" })}>
