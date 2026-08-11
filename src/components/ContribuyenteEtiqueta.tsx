@@ -77,18 +77,7 @@ export default function ContribuyenteEtiqueta({ sujetoImpuesto }: { sujetoImpues
     return (
       <span style={{ fontSize: 12.5 }}>
         <strong>{nombre ?? "(sin nombre)"}</strong>
-        {identificacion && <span className="code"> · {identificacion}</span>}{" "}
-        <button
-          className="rowbtn"
-          style={{ fontSize: 11 }}
-          onClick={() => {
-            setFormNombre(nombre ?? "");
-            setFormId(identificacion ?? "");
-            setEditando(true);
-          }}
-        >
-          editar
-        </button>
+        {identificacion && <span className="code"> · {identificacion}</span>}
       </span>
     );
   }
