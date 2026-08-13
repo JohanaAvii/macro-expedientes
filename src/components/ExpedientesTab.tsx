@@ -23,6 +23,7 @@ type NotifDoc = {
   sujetoImpuesto: string;
   numeroGuia: string;
   estadoEnvio: string;
+  archivoUrl: string | null;
 };
 
 const TRAIL_NODES = [
@@ -101,21 +102,14 @@ export default function ExpedientesTab() {
   async function consultarDocumentos(numero: string) {
     setSeleccionado(numero);
     setLoading(true);
-    const res = await fetch(`/api/expedientes/${encodeURIComponent(numero)}/documentos`);
-    const json = await res.json();
+    const [resDocs, resNotif] = await Promise.all([
+      fetch(`/api/expedientes/${encodeURIComponent(numero)}/documentos`),
+      fetch(`/api/expedientes/${encodeURIComponent(numero)}/notificaciones`)
+    ]);
+    const [jsonDocs, jsonNotif] = await Promise.all([resDocs.json(), resNotif.json()]);
     setLoading(false);
-    setDocumentos(json.data);
-    setNotificaciones(null);
-    setActiveNodes(["sujeto", "expediente"]);
-  }
-
-  async function consultarNotificaciones() {
-    if (!seleccionado) return;
-    setLoading(true);
-    const res = await fetch(`/api/expedientes/${encodeURIComponent(seleccionado)}/notificaciones`);
-    const json = await res.json();
-    setLoading(false);
-    setNotificaciones(json.data);
+    setDocumentos(jsonDocs.data);
+    setNotificaciones(jsonNotif.data);
     setActiveNodes(["sujeto", "expediente", "documento", "notificacion"]);
   }
 
@@ -179,9 +173,6 @@ export default function ExpedientesTab() {
           <div className="btnrow">
             <button className="btn btn-primary" onClick={() => buscarExpedientes()} disabled={loading}>
               Buscar expedientes <span>↵</span>
-            </button>
-            <button className="btn btn-ghost" onClick={consultarNotificaciones} disabled={!seleccionado || loading}>
-              Consultar notificaciones
             </button>
             <button className="btn btn-danger-ghost" onClick={limpiar}>
               Limpiar filtros
@@ -332,8 +323,8 @@ export default function ExpedientesTab() {
           {!notificaciones ? (
             <div className="empty">
               <div className="glyph">—</div>
-              <p>Consulte notificaciones</p>
-              <p className="sub">Disponible una vez seleccionado el expediente.</p>
+              <p>Seleccione un expediente</p>
+              <p className="sub">Las notificaciones se cargan junto con los documentos.</p>
             </div>
           ) : notificaciones.length === 0 ? (
             <div className="empty">
@@ -349,6 +340,7 @@ export default function ExpedientesTab() {
                   <th>N.º de guía</th>
                   <th>Estado de envío</th>
                   <th>Sujeto impuesto</th>
+                  <th>Archivo</th>
                 </tr>
               </thead>
               <tbody>
@@ -364,6 +356,15 @@ export default function ExpedientesTab() {
                       </span>
                     </td>
                     <td className="code">{n.sujetoImpuesto}</td>
+                    <td>
+                      {n.archivoUrl ? (
+                        <a className="rowbtn" href={n.archivoUrl} target="_blank" rel="noopener noreferrer">
+                          Ver PDF ↗
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

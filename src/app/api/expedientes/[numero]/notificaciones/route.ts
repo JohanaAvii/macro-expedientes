@@ -15,6 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
       documentoExpedienteId: true,
       nombre: true,
       sujetoImpuesto: true,
+      archivoUrl: true,
       notificaciones: {
         select: { numeroGuia: true, estadoEnvio: true },
         distinct: ["numeroGuia", "estadoEnvio"]
@@ -29,7 +30,8 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
       nombre: d.nombre,
       sujetoImpuesto: d.sujetoImpuesto,
       numeroGuia: n.numeroGuia,
-      estadoEnvio: n.estadoEnvio
+      estadoEnvio: n.estadoEnvio,
+      archivoUrl: d.archivoUrl
     }))
   );
 
