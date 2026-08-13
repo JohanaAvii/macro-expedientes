@@ -6,6 +6,7 @@ import Trail from "@/components/Trail";
 import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
 import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
 import { generarConstanciaLiquidaciones } from "@/lib/constancia";
+import { descargarCSV } from "@/lib/csv";
 
 type Liquidacion = { sujetoImpuesto: string; liquidacionOficialId: string; numeroLiquidacionOficial: string };
 type NotifLiq = { numeroLiquidacionOficial: string; sujetoImpuesto: string; numeroNotificacion: string; numeroGuia: string };
@@ -101,6 +102,20 @@ export default function LiquidacionesTab() {
     } finally {
       setGenerandoPdf(false);
     }
+  }
+
+  function exportarNotificacionesCSV() {
+    if (!notificaciones || notificaciones.length === 0) return;
+    descargarCSV(
+      `notificaciones-liquidacion-${seleccionado ?? "consulta"}.csv`,
+      [
+        { header: "N.º liquidación oficial", valor: (n: NotifLiq) => n.numeroLiquidacionOficial, comoTexto: true },
+        { header: "Sujeto impuesto", valor: (n: NotifLiq) => n.sujetoImpuesto, comoTexto: true },
+        { header: "N.º notificación", valor: (n: NotifLiq) => n.numeroNotificacion, comoTexto: true },
+        { header: "N.º de guía", valor: (n: NotifLiq) => n.numeroGuia, comoTexto: true }
+      ],
+      notificaciones
+    );
   }
 
   return (
@@ -214,7 +229,7 @@ export default function LiquidacionesTab() {
         <div className="section">
           <div className="section-head">
             <h2>Sección 2 · Notificaciones de la liquidación</h2>
-            <button className="export" onClick={() => alert("Exportación a CSV — los campos con ceros iniciales se conservan como texto.")}>
+            <button className="export" onClick={exportarNotificacionesCSV} disabled={!notificaciones || notificaciones.length === 0}>
               Exportar CSV
             </button>
           </div>

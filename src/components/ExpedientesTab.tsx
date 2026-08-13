@@ -6,6 +6,7 @@ import Trail from "@/components/Trail";
 import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
 import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
 import { generarConstanciaExpedientes } from "@/lib/constancia";
+import { descargarCSV } from "@/lib/csv";
 
 type Expediente = { numeroExpediente: string; sujetoImpuesto: string };
 type Documento = {
@@ -132,6 +133,21 @@ export default function ExpedientesTab() {
     } finally {
       setGenerandoPdf(false);
     }
+  }
+
+  function exportarNotificacionesCSV() {
+    if (!notificaciones || notificaciones.length === 0) return;
+    descargarCSV(
+      `notificaciones-expediente-${seleccionado ?? "consulta"}.csv`,
+      [
+        { header: "ID documento", valor: (n: NotifDoc) => n.documentoExpedienteId, comoTexto: true },
+        { header: "Nombre", valor: (n: NotifDoc) => n.nombre },
+        { header: "N.º de guía", valor: (n: NotifDoc) => n.numeroGuia, comoTexto: true },
+        { header: "Estado de envío", valor: (n: NotifDoc) => n.estadoEnvio },
+        { header: "Sujeto impuesto", valor: (n: NotifDoc) => n.sujetoImpuesto, comoTexto: true }
+      ],
+      notificaciones
+    );
   }
 
   return (
@@ -309,7 +325,7 @@ export default function ExpedientesTab() {
         <div className="section">
           <div className="section-head">
             <h2>Sección 3 · Notificaciones del expediente</h2>
-            <button className="export" onClick={() => alert("Exportación a CSV — los campos con ceros iniciales se conservan como texto.")}>
+            <button className="export" onClick={exportarNotificacionesCSV} disabled={!notificaciones || notificaciones.length === 0}>
               Exportar CSV
             </button>
           </div>
