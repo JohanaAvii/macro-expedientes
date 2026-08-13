@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import Trail from "@/components/Trail";
 import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
 import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
+import { generarConstanciaExpedientes } from "@/lib/constancia";
 
 type Expediente = { numeroExpediente: string; sujetoImpuesto: string };
 type Documento = {
@@ -30,8 +32,11 @@ const TRAIL_NODES = [
 ];
 
 export default function ExpedientesTab() {
+  const { data: session } = useSession();
   const [sujeto, setSujeto] = useState("010205210054001");
   const [numeroExpediente, setNumeroExpediente] = useState("");
+  const [criterioUsado, setCriterioUsado] = useState("");
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   const [expedientes, setExpedientes] = useState<Expediente[] | null>(null);
   const [documentos, setDocumentos] = useState<Documento[] | null>(null);
@@ -62,8 +67,13 @@ export default function ExpedientesTab() {
     }
     setLoading(true);
     const qs = new URLSearchParams();
-    if (numeroExpediente.trim()) qs.set("expediente", numeroExpediente.trim());
-    else qs.set("sujeto", sujetoUsar.trim());
+    if (numeroExpediente.trim()) {
+      qs.set("expediente", numeroExpediente.trim());
+      setCriterioUsado(`Número de expediente: ${numeroExpediente.trim()}`);
+    } else {
+      qs.set("sujeto", sujetoUsar.trim());
+      setCriterioUsado(`Referencia corta / Sujeto impuesto: ${sujetoUsar.trim()}`);
+    }
 
     const res = await fetch(`/api/expedientes?${qs.toString()}`);
     const json = await res.json();
@@ -106,6 +116,22 @@ export default function ExpedientesTab() {
     setLoading(false);
     setNotificaciones(json.data);
     setActiveNodes(["sujeto", "expediente", "documento", "notificacion"]);
+  }
+
+  async function descargarConstancia() {
+    if (!expedientes) return;
+    setGenerandoPdf(true);
+    try {
+      await generarConstanciaExpedientes({
+        usuario: session?.user?.name ?? session?.user?.email ?? "Usuario",
+        criterio: criterioUsado,
+        expedientes,
+        documentos,
+        notificaciones
+      });
+    } finally {
+      setGenerandoPdf(false);
+    }
   }
 
   return (
@@ -171,9 +197,16 @@ export default function ExpedientesTab() {
         <div className="section">
           <div className="section-head">
             <h2>Sección 1 · Expedientes encontrados</h2>
-            <span className="count">
-              {expedientes ? `${expedientes.length} ${expedientes.length === 1 ? "resultado" : "resultados"}` : "—"}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="count">
+                {expedientes ? `${expedientes.length} ${expedientes.length === 1 ? "resultado" : "resultados"}` : "—"}
+              </span>
+              {expedientes && (
+                <button className="export" onClick={descargarConstancia} disabled={generandoPdf}>
+                  {generandoPdf ? "Generando…" : "Descargar constancia (PDF)"}
+                </button>
+              )}
+            </div>
           </div>
           {expedientes && expedientes.length > 0 && (
             <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", background: "#FAFAF7" }}>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import Trail from "@/components/Trail";
 import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
 import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
+import { generarConstanciaLiquidaciones } from "@/lib/constancia";
 
 type Liquidacion = { sujetoImpuesto: string; liquidacionOficialId: string; numeroLiquidacionOficial: string };
 type NotifLiq = { numeroLiquidacionOficial: string; sujetoImpuesto: string; numeroNotificacion: string; numeroGuia: string };
@@ -15,8 +17,11 @@ const TRAIL_NODES = [
 ];
 
 export default function LiquidacionesTab() {
+  const { data: session } = useSession();
   const [sujeto, setSujeto] = useState("010205210054001");
   const [numeroLiquidacion, setNumeroLiquidacion] = useState("");
+  const [criterioUsado, setCriterioUsado] = useState("");
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   const [liquidaciones, setLiquidaciones] = useState<Liquidacion[] | null>(null);
   const [notificaciones, setNotificaciones] = useState<NotifLiq[] | null>(null);
@@ -44,8 +49,13 @@ export default function LiquidacionesTab() {
     }
     setLoading(true);
     const qs = new URLSearchParams();
-    if (numeroLiquidacion.trim()) qs.set("liquidacion", numeroLiquidacion.trim());
-    else qs.set("sujeto", sujetoUsar.trim());
+    if (numeroLiquidacion.trim()) {
+      qs.set("liquidacion", numeroLiquidacion.trim());
+      setCriterioUsado(`Número de liquidación oficial: ${numeroLiquidacion.trim()}`);
+    } else {
+      qs.set("sujeto", sujetoUsar.trim());
+      setCriterioUsado(`Sujeto impuesto: ${sujetoUsar.trim()}`);
+    }
 
     const res = await fetch(`/api/liquidaciones?${qs.toString()}`);
     const json = await res.json();
@@ -76,6 +86,21 @@ export default function LiquidacionesTab() {
     setLoading(false);
     setNotificaciones(json.data);
     setActiveNodes(["sujeto", "liquidacion", "notificacion"]);
+  }
+
+  async function descargarConstancia() {
+    if (!liquidaciones) return;
+    setGenerandoPdf(true);
+    try {
+      await generarConstanciaLiquidaciones({
+        usuario: session?.user?.name ?? session?.user?.email ?? "Usuario",
+        criterio: criterioUsado,
+        liquidaciones,
+        notificaciones
+      });
+    } finally {
+      setGenerandoPdf(false);
+    }
   }
 
   return (
@@ -129,9 +154,16 @@ export default function LiquidacionesTab() {
         <div className="section">
           <div className="section-head">
             <h2>Sección 1 · Liquidaciones oficiales</h2>
-            <span className="count">
-              {liquidaciones ? `${liquidaciones.length} ${liquidaciones.length === 1 ? "resultado" : "resultados"}` : "—"}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="count">
+                {liquidaciones ? `${liquidaciones.length} ${liquidaciones.length === 1 ? "resultado" : "resultados"}` : "—"}
+              </span>
+              {liquidaciones && (
+                <button className="export" onClick={descargarConstancia} disabled={generandoPdf}>
+                  {generandoPdf ? "Generando…" : "Descargar constancia (PDF)"}
+                </button>
+              )}
+            </div>
           </div>
           {liquidaciones && liquidaciones.length > 0 && (
             <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", background: "#FAFAF7" }}>
