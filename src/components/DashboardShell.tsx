@@ -23,7 +23,7 @@ export default function DashboardShell() {
           Cartera predial <span className="tag">expedientes</span>
         </button>
         <button className={`tab ${tab === "liquidaciones" ? "active" : ""}`} onClick={() => setTab("liquidaciones")}>
-          Cartera ICA <span className="tag">liquidaciones</span>
+          Cartera ICA <span className="tag">expedientes</span>
         </button>
       </div>
 

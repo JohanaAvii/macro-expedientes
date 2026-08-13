@@ -121,7 +121,7 @@ export default function LiquidacionesTab() {
   return (
     <div className="stage">
       <aside className="panel">
-        <div className="panel-head">Filtros · liquidaciones</div>
+        <div className="panel-head">Filtros · Expedientes</div>
         <div className="panel-body">
           <div className="field">
             <label htmlFor="inp-sujeto-liq">Sujeto impuesto</label>
@@ -134,7 +134,7 @@ export default function LiquidacionesTab() {
             />
           </div>
           <div className="field">
-            <label htmlFor="inp-liq">Número de liquidación oficial</label>
+            <label htmlFor="inp-liq">Número de Expedientes oficial</label>
             <input
               id="inp-liq"
               type="text"
@@ -145,7 +145,7 @@ export default function LiquidacionesTab() {
           </div>
           <div className="btnrow">
             <button className="btn btn-primary" onClick={() => buscarLiquidaciones()} disabled={loading}>
-              Buscar liquidaciones <span>↵</span>
+              Buscar Expedientes <span>↵</span>
             </button>
             <button className="btn btn-danger-ghost" onClick={limpiar}>
               Limpiar filtros
@@ -168,7 +168,7 @@ export default function LiquidacionesTab() {
 
         <div className="section">
           <div className="section-head">
-            <h2>Sección 1 · Liquidaciones oficiales</h2>
+            <h2>Sección 1 · Expedientes oficiales</h2>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span className="count">
                 {liquidaciones ? `${liquidaciones.length} ${liquidaciones.length === 1 ? "resultado" : "resultados"}` : "—"}
@@ -201,8 +201,8 @@ export default function LiquidacionesTab() {
               <thead>
                 <tr>
                   <th>Sujeto impuesto</th>
-                  <th>ID liquidación oficial</th>
-                  <th>N.º liquidación oficial</th>
+                  <th>ID Expedientes oficial</th>
+                  <th>N.º Expedientes oficial</th>
                   <th></th>
                 </tr>
               </thead>
@@ -228,7 +228,7 @@ export default function LiquidacionesTab() {
 
         <div className="section">
           <div className="section-head">
-            <h2>Sección 2 · Notificaciones de la liquidación</h2>
+            <h2>Sección 2 · Notificaciones del Expedientes</h2>
             <button className="export" onClick={exportarNotificacionesCSV} disabled={!notificaciones || notificaciones.length === 0}>
               Exportar CSV
             </button>
@@ -236,19 +236,19 @@ export default function LiquidacionesTab() {
           {!notificaciones ? (
             <div className="empty">
               <div className="glyph">—</div>
-              <p>Seleccione una liquidación</p>
+              <p>Seleccione un Expediente</p>
               <p className="sub">Aparecerán aquí su notificación y guía.</p>
             </div>
           ) : notificaciones.length === 0 ? (
             <div className="empty">
               <div className="glyph">—</div>
-              <p>Esta liquidación no tiene notificación o guía asociada.</p>
+              <p>Esta Expedientes no tiene notificación o guía asociada.</p>
             </div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>N.º liquidación oficial</th>
+                  <th>N.º Expedientes oficial</th>
                   <th>Sujeto impuesto</th>
                   <th>N.º notificación</th>
                   <th>N.º de guía</th>
