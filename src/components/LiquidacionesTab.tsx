@@ -35,7 +35,7 @@ export default function LiquidacionesTab() {
   const [numeroLiquidacion, setNumeroLiquidacion] = useState("");
   const [criterioUsado, setCriterioUsado] = useState("");
   const [generandoPdf, setGenerandoPdf] = useState(false);
-  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
+  const [vistaPrevia, setVistaPrevia] = useState<{ url: string; tipo: "imagen" | "pdf" } | null>(null);
 
   const [liquidaciones, setLiquidaciones] = useState<Liquidacion[] | null>(null);
   const [notificaciones, setNotificaciones] = useState<NotifLiq[] | null>(null);
@@ -236,7 +236,7 @@ export default function LiquidacionesTab() {
                           className="rowbtn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setVistaPrevia(l.archivoUrl);
+                            if (l.archivoUrl) setVistaPrevia({ url: l.archivoUrl, tipo: "pdf" });
                           }}
                         >
                           Ver PDF ↗
@@ -293,7 +293,7 @@ export default function LiquidacionesTab() {
                     <td className="code">{n.numeroGuia}</td>
                     <td>
                       {n.guiaUrl ? (
-                        <button className="rowbtn" onClick={() => setVistaPrevia(n.guiaUrl)}>
+                        <button className="rowbtn" onClick={() => n.guiaUrl && setVistaPrevia({ url: n.guiaUrl, tipo: "imagen" })}>
                           Ver imagen ↗
                         </button>
                       ) : (
@@ -307,7 +307,7 @@ export default function LiquidacionesTab() {
           )}
         </div>
       </main>
-      <VistaPreviaModal url={vistaPrevia} onClose={() => setVistaPrevia(null)} />
+      <VistaPreviaModal url={vistaPrevia?.url ?? null} tipo={vistaPrevia?.tipo} onClose={() => setVistaPrevia(null)} />
     </div>
   );
 }

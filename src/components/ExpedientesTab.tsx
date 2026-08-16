@@ -41,7 +41,7 @@ export default function ExpedientesTab() {
   const [numeroExpediente, setNumeroExpediente] = useState("");
   const [criterioUsado, setCriterioUsado] = useState("");
   const [generandoPdf, setGenerandoPdf] = useState(false);
-  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
+  const [vistaPrevia, setVistaPrevia] = useState<{ url: string; tipo: "imagen" | "pdf" } | null>(null);
 
   const [expedientes, setExpedientes] = useState<Expediente[] | null>(null);
   const [documentos, setDocumentos] = useState<Documento[] | null>(null);
@@ -302,7 +302,7 @@ export default function ExpedientesTab() {
                     <td className="code">{d.numeroDocumento}</td>
                     <td>
                       {d.archivoUrl ? (
-                        <button className="rowbtn" onClick={() => setVistaPrevia(d.archivoUrl)}>
+                        <button className="rowbtn" onClick={() => d.archivoUrl && setVistaPrevia({ url: d.archivoUrl, tipo: "pdf" })}>
                           Ver PDF ↗
                         </button>
                       ) : (
@@ -361,7 +361,7 @@ export default function ExpedientesTab() {
                     <td className="code">{n.sujetoImpuesto}</td>
                     <td>
                       {n.guiaUrl ? (
-                        <button className="rowbtn" onClick={() => setVistaPrevia(n.guiaUrl)}>
+                        <button className="rowbtn" onClick={() => n.guiaUrl && setVistaPrevia({ url: n.guiaUrl, tipo: "imagen" })}>
                           Ver imagen ↗
                         </button>
                       ) : (
@@ -375,7 +375,7 @@ export default function ExpedientesTab() {
           )}
         </div>
       </main>
-      <VistaPreviaModal url={vistaPrevia} onClose={() => setVistaPrevia(null)} />
+      <VistaPreviaModal url={vistaPrevia?.url ?? null} tipo={vistaPrevia?.tipo} onClose={() => setVistaPrevia(null)} />
     </div>
   );
 }

@@ -1,7 +1,35 @@
 "use client";
 
-export default function VistaPreviaModal({ url, onClose }: { url: string | null; onClose: () => void }) {
+import { useEffect, useState } from "react";
+
+export type TipoVistaPrevia = "imagen" | "pdf" | "auto";
+
+function pareceImagen(url: string) {
+  return /\.(jpg|jpeg|png|gif|bmp|tiff?)(\?|$)/i.test(url);
+}
+function parecePdf(url: string) {
+  return /\.pdf(\?|$)/i.test(url);
+}
+
+export default function VistaPreviaModal({
+  url,
+  tipo = "auto",
+  onClose
+}: {
+  url: string | null;
+  tipo?: TipoVistaPrevia;
+  onClose: () => void;
+}) {
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+  }, [url]);
+
   if (!url) return null;
+
+  const esPdf = tipo === "pdf" || (tipo === "auto" && parecePdf(url));
+  const esImagen = !esPdf && (tipo === "imagen" || pareceImagen(url) || tipo === "auto");
 
   return (
     <div
@@ -54,10 +82,39 @@ export default function VistaPreviaModal({ url, onClose }: { url: string | null;
             </button>
           </div>
         </div>
-        <div style={{ flex: 1, background: "#f4f4f2" }}>
-          {/* El iframe muestra bien tanto imágenes (jpg/png) como PDF,
-              sin depender de saber de antemano cuál de los dos es. */}
-          <iframe src={url} title="Vista previa" style={{ width: "100%", height: "75vh", border: "none", display: "block" }} />
+        <div
+          style={{
+            flex: 1,
+            background: "#f4f4f2",
+            minHeight: 300,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "auto"
+          }}
+        >
+          {error ? (
+            <div style={{ padding: 30, textAlign: "center", color: "var(--ink-soft)", fontSize: 13 }}>
+              No se pudo cargar la vista previa aquí.
+              <br />
+              Usa &quot;Abrir en pestaña nueva&quot; arriba para verlo directamente.
+            </div>
+          ) : esImagen ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={url}
+              alt="Vista previa del archivo"
+              style={{ maxWidth: "100%", maxHeight: "75vh", display: "block" }}
+              onError={() => setError(true)}
+            />
+          ) : (
+            <iframe
+              src={url}
+              title="Vista previa"
+              style={{ width: "100%", height: "75vh", border: "none", display: "block" }}
+              onError={() => setError(true)}
+            />
+          )}
         </div>
       </div>
     </div>
