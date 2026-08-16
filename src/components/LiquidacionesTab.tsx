@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Trail from "@/components/Trail";
 import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
 import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
+import VistaPreviaModal from "@/components/VistaPreviaModal";
 import { generarConstanciaLiquidaciones } from "@/lib/constancia";
 import { descargarCSV } from "@/lib/csv";
 
@@ -34,6 +35,7 @@ export default function LiquidacionesTab() {
   const [numeroLiquidacion, setNumeroLiquidacion] = useState("");
   const [criterioUsado, setCriterioUsado] = useState("");
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
 
   const [liquidaciones, setLiquidaciones] = useState<Liquidacion[] | null>(null);
   const [notificaciones, setNotificaciones] = useState<NotifLiq[] | null>(null);
@@ -230,15 +232,15 @@ export default function LiquidacionesTab() {
                     <td className="code">{l.numeroLiquidacionOficial}</td>
                     <td>
                       {l.archivoUrl ? (
-                        <a
+                        <button
                           className="rowbtn"
-                          href={l.archivoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setVistaPrevia(l.archivoUrl);
+                          }}
                         >
                           Ver PDF ↗
-                        </a>
+                        </button>
                       ) : (
                         <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
                       )}
@@ -291,9 +293,9 @@ export default function LiquidacionesTab() {
                     <td className="code">{n.numeroGuia}</td>
                     <td>
                       {n.guiaUrl ? (
-                        <a className="rowbtn" href={n.guiaUrl} target="_blank" rel="noopener noreferrer">
+                        <button className="rowbtn" onClick={() => setVistaPrevia(n.guiaUrl)}>
                           Ver imagen ↗
-                        </a>
+                        </button>
                       ) : (
                         <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
                       )}
@@ -305,6 +307,7 @@ export default function LiquidacionesTab() {
           )}
         </div>
       </main>
+      <VistaPreviaModal url={vistaPrevia} onClose={() => setVistaPrevia(null)} />
     </div>
   );
 }

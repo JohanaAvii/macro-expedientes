@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Trail from "@/components/Trail";
 import ContribuyenteBuscador from "@/components/ContribuyenteBuscador";
 import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
+import VistaPreviaModal from "@/components/VistaPreviaModal";
 import { generarConstanciaExpedientes } from "@/lib/constancia";
 import { descargarCSV } from "@/lib/csv";
 
@@ -40,6 +41,7 @@ export default function ExpedientesTab() {
   const [numeroExpediente, setNumeroExpediente] = useState("");
   const [criterioUsado, setCriterioUsado] = useState("");
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
 
   const [expedientes, setExpedientes] = useState<Expediente[] | null>(null);
   const [documentos, setDocumentos] = useState<Documento[] | null>(null);
@@ -300,9 +302,9 @@ export default function ExpedientesTab() {
                     <td className="code">{d.numeroDocumento}</td>
                     <td>
                       {d.archivoUrl ? (
-                        <a className="rowbtn" href={d.archivoUrl} target="_blank" rel="noopener noreferrer">
+                        <button className="rowbtn" onClick={() => setVistaPrevia(d.archivoUrl)}>
                           Ver PDF ↗
-                        </a>
+                        </button>
                       ) : (
                         <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
                       )}
@@ -359,9 +361,9 @@ export default function ExpedientesTab() {
                     <td className="code">{n.sujetoImpuesto}</td>
                     <td>
                       {n.guiaUrl ? (
-                        <a className="rowbtn" href={n.guiaUrl} target="_blank" rel="noopener noreferrer">
+                        <button className="rowbtn" onClick={() => setVistaPrevia(n.guiaUrl)}>
                           Ver imagen ↗
-                        </a>
+                        </button>
                       ) : (
                         <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
                       )}
@@ -373,6 +375,7 @@ export default function ExpedientesTab() {
           )}
         </div>
       </main>
+      <VistaPreviaModal url={vistaPrevia} onClose={() => setVistaPrevia(null)} />
     </div>
   );
 }
