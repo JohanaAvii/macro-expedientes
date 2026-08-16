@@ -8,8 +8,19 @@ import ContribuyenteEtiqueta from "@/components/ContribuyenteEtiqueta";
 import { generarConstanciaLiquidaciones } from "@/lib/constancia";
 import { descargarCSV } from "@/lib/csv";
 
-type Liquidacion = { sujetoImpuesto: string; liquidacionOficialId: string; numeroLiquidacionOficial: string };
-type NotifLiq = { numeroLiquidacionOficial: string; sujetoImpuesto: string; numeroNotificacion: string; numeroGuia: string };
+type Liquidacion = {
+  sujetoImpuesto: string;
+  liquidacionOficialId: string;
+  numeroLiquidacionOficial: string;
+  archivoUrl: string | null;
+};
+type NotifLiq = {
+  numeroLiquidacionOficial: string;
+  sujetoImpuesto: string;
+  numeroNotificacion: string;
+  numeroGuia: string;
+  guiaUrl: string | null;
+};
 
 const TRAIL_NODES = [
   { key: "sujeto", label: "Sujeto impuesto" },
@@ -121,7 +132,7 @@ export default function LiquidacionesTab() {
   return (
     <div className="stage">
       <aside className="panel">
-        <div className="panel-head">Filtros · Expedientes</div>
+        <div className="panel-head">Filtros · liquidaciones</div>
         <div className="panel-body">
           <div className="field">
             <label htmlFor="inp-sujeto-liq">Sujeto impuesto</label>
@@ -134,7 +145,7 @@ export default function LiquidacionesTab() {
             />
           </div>
           <div className="field">
-            <label htmlFor="inp-liq">Número de Expedientes oficial</label>
+            <label htmlFor="inp-liq">Número de liquidación oficial</label>
             <input
               id="inp-liq"
               type="text"
@@ -145,7 +156,7 @@ export default function LiquidacionesTab() {
           </div>
           <div className="btnrow">
             <button className="btn btn-primary" onClick={() => buscarLiquidaciones()} disabled={loading}>
-              Buscar Expedientes <span>↵</span>
+              Buscar liquidaciones <span>↵</span>
             </button>
             <button className="btn btn-danger-ghost" onClick={limpiar}>
               Limpiar filtros
@@ -168,7 +179,7 @@ export default function LiquidacionesTab() {
 
         <div className="section">
           <div className="section-head">
-            <h2>Sección 1 · Expedientes oficiales</h2>
+            <h2>Sección 1 · Liquidaciones oficiales</h2>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span className="count">
                 {liquidaciones ? `${liquidaciones.length} ${liquidaciones.length === 1 ? "resultado" : "resultados"}` : "—"}
@@ -201,8 +212,9 @@ export default function LiquidacionesTab() {
               <thead>
                 <tr>
                   <th>Sujeto impuesto</th>
-                  <th>ID Expedientes oficial</th>
-                  <th>N.º Expedientes oficial</th>
+                  <th>ID liquidación oficial</th>
+                  <th>N.º liquidación oficial</th>
+                  <th>PDF de liquidación</th>
                   <th></th>
                 </tr>
               </thead>
@@ -217,6 +229,21 @@ export default function LiquidacionesTab() {
                     <td className="code">{l.liquidacionOficialId}</td>
                     <td className="code">{l.numeroLiquidacionOficial}</td>
                     <td>
+                      {l.archivoUrl ? (
+                        <a
+                          className="rowbtn"
+                          href={l.archivoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Ver PDF ↗
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
+                      )}
+                    </td>
+                    <td>
                       <button className="rowbtn">Ver notificación →</button>
                     </td>
                   </tr>
@@ -228,7 +255,7 @@ export default function LiquidacionesTab() {
 
         <div className="section">
           <div className="section-head">
-            <h2>Sección 2 · Notificaciones del Expedientes</h2>
+            <h2>Sección 2 · Notificaciones de la liquidación</h2>
             <button className="export" onClick={exportarNotificacionesCSV} disabled={!notificaciones || notificaciones.length === 0}>
               Exportar CSV
             </button>
@@ -236,22 +263,23 @@ export default function LiquidacionesTab() {
           {!notificaciones ? (
             <div className="empty">
               <div className="glyph">—</div>
-              <p>Seleccione un Expediente</p>
+              <p>Seleccione una liquidación</p>
               <p className="sub">Aparecerán aquí su notificación y guía.</p>
             </div>
           ) : notificaciones.length === 0 ? (
             <div className="empty">
               <div className="glyph">—</div>
-              <p>Esta Expedientes no tiene notificación o guía asociada.</p>
+              <p>Esta liquidación no tiene notificación o guía asociada.</p>
             </div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>N.º Expedientes oficial</th>
+                  <th>N.º liquidación oficial</th>
                   <th>Sujeto impuesto</th>
                   <th>N.º notificación</th>
                   <th>N.º de guía</th>
+                  <th>Comprobante de guía</th>
                 </tr>
               </thead>
               <tbody>
@@ -261,6 +289,15 @@ export default function LiquidacionesTab() {
                     <td className="code">{n.sujetoImpuesto}</td>
                     <td className="code">{n.numeroNotificacion}</td>
                     <td className="code">{n.numeroGuia}</td>
+                    <td>
+                      {n.guiaUrl ? (
+                        <a className="rowbtn" href={n.guiaUrl} target="_blank" rel="noopener noreferrer">
+                          Ver imagen ↗
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

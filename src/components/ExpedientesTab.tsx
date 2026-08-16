@@ -23,7 +23,8 @@ type NotifDoc = {
   sujetoImpuesto: string;
   numeroGuia: string;
   estadoEnvio: string;
-  archivoUrl: string | null;
+  documentoUrl: string | null;
+  guiaUrl: string | null;
 };
 
 const TRAIL_NODES = [
@@ -357,9 +358,9 @@ export default function ExpedientesTab() {
                     </td>
                     <td className="code">{n.sujetoImpuesto}</td>
                     <td>
-                      {n.archivoUrl ? (
-                        <a className="rowbtn" href={n.archivoUrl} target="_blank" rel="noopener noreferrer">
-                          Ver PDF ↗
+                      {n.guiaUrl ? (
+                        <a className="rowbtn" href={n.guiaUrl} target="_blank" rel="noopener noreferrer">
+                          Ver imagen ↗
                         </a>
                       ) : (
                         <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>No cargado</span>

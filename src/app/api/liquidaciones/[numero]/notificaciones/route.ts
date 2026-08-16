@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
       sujetoImpuesto: true,
       numeroLiquidacionOficial: true,
       notificaciones: {
-        select: { numeroNotificacion: true, numeroGuia: true },
+        select: { numeroNotificacion: true, numeroGuia: true, archivoUrl: true },
         distinct: ["numeroNotificacion", "numeroGuia"]
       }
     }
@@ -25,7 +25,8 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
     numeroLiquidacionOficial: liquidacion.numeroLiquidacionOficial,
     sujetoImpuesto: liquidacion.sujetoImpuesto,
     numeroNotificacion: n.numeroNotificacion,
-    numeroGuia: n.numeroGuia
+    numeroGuia: n.numeroGuia,
+    guiaUrl: n.archivoUrl
   }));
 
   return NextResponse.json({ data });

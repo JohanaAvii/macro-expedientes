@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
       sujetoImpuesto: true,
       archivoUrl: true,
       notificaciones: {
-        select: { numeroGuia: true, estadoEnvio: true },
+        select: { numeroGuia: true, estadoEnvio: true, archivoUrl: true },
         distinct: ["numeroGuia", "estadoEnvio"]
       }
     },
@@ -31,7 +31,8 @@ export async function GET(req: NextRequest, { params }: { params: { numero: stri
       sujetoImpuesto: d.sujetoImpuesto,
       numeroGuia: n.numeroGuia,
       estadoEnvio: n.estadoEnvio,
-      archivoUrl: d.archivoUrl
+      documentoUrl: d.archivoUrl, // PDF del documento (Expedientes a entregar)
+      guiaUrl: n.archivoUrl // imagen del comprobante de guía (Notificaciones)
     }))
   );
 

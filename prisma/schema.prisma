@@ -72,6 +72,10 @@ model NotificacionDocumento {
   documento             DocumentoExpediente @relation(fields: [documentoExpedienteId], references: [documentoExpedienteId])
   numeroGuia            String
   estadoEnvio           String // ENTREGADO | DEVUELTO | otros (11.7)
+  // Imagen del comprobante de guía (soporte de entrega/devolución),
+  // distinta del PDF del documento — se carga con scripts/subir-guias.ts
+  archivoUrl            String?
+  archivoNombreOriginal String?
 
   @@index([documentoExpedienteId])
   @@index([numeroGuia])
@@ -85,6 +89,10 @@ model LiquidacionOficial {
   numeroLiquidacionOficial String                    @unique
   notificaciones           NotificacionLiquidacion[]
   createdAt                DateTime                  @default(now())
+  // PDF del documento oficial de la liquidación (carpeta "Liquidaciones_Oficiales"
+  // dentro de Notificaciones) — distinto del comprobante de guía.
+  archivoUrl               String?
+  archivoNombreOriginal    String?
 
   @@index([sujetoImpuesto])
 }
@@ -97,6 +105,9 @@ model NotificacionLiquidacion {
   numeroGuia               String
   numeroLiquidacionOficial String
   liquidacion              LiquidacionOficial @relation(fields: [numeroLiquidacionOficial], references: [numeroLiquidacionOficial])
+  // Imagen del comprobante de guía (soporte de entrega/devolución)
+  archivoUrl               String?
+  archivoNombreOriginal    String?
 
   @@index([numeroLiquidacionOficial])
   @@index([numeroGuia])

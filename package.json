@@ -12,6 +12,7 @@
     "seed": "tsx prisma/seed.ts",
     "importar:datos": "tsx scripts/importar-datos.ts",
     "importar:pdfs": "tsx scripts/subir-pdfs.ts",
+    "subir:guias": "tsx scripts/subir-guias.ts",
     "limpiar:urls-viejas": "tsx scripts/limpiar-urls-viejas.ts",
     "extraer:contribuyentes": "tsx scripts/extraer-contribuyentes.ts"
   },

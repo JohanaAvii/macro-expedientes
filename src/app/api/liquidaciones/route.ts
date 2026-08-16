@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     select: {
       sujetoImpuesto: true,
       liquidacionOficialId: true,
-      numeroLiquidacionOficial: true
+      numeroLiquidacionOficial: true,
+      archivoUrl: true
     },
     orderBy: { numeroLiquidacionOficial: "asc" }
   });
